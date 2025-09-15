@@ -1,7 +1,9 @@
 # IVAO Live Airport Board (UTC)
 
-A full‑screen, **blue‑and‑yellow airport‑style arrivals & departures board** powered by the [IVAO Whazzup v2 JSON feed](https://api.ivao.aero/v2/tracker/whazzup).  
-It displays **live** pilot and ATC data for a selected airport ICAO code, updating automatically every minute.
+A full‑screen, **blue‑and‑yellow airport‑style arrivals & departures board** powered by the [IVAO Whazzup v2 JSON feed](https://wiki.ivao.aero/en/home/devops/api/whazuup/file-format-v2).  
+It displays **live** pilot and ATC data for a selected airport ICAO code, updating automatically every minute:
+
+https://millosolomillo.github.io/ivao-kiosk/
 
 ---
 
@@ -28,4 +30,5 @@ It displays **live** pilot and ATC data for a selected airport ICAO code, updati
 ## 🔗 Quick‑link to a specific airport
 
 You can share a link that opens directly to a specific airport by adding `?icao=XXXX` to the URL:
+https://millosolomillo.github.io/ivao-kiosk/?icao=LEMD
 
