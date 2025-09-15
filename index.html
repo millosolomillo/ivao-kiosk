@@ -206,9 +206,9 @@ async function updateBoard() {
       const acft = p.flightPlan?.aircraftId || "-";
       const dep = (p.flightPlan?.departureId || "").toUpperCase();
       const arr = (p.flightPlan?.arrivalId || "").toUpperCase();
-      const phase = p.transponder?.flightStatus || (p.lastTrack?.groundSpeed > 40 ? "En Route" : "Ground");
-      const etd = secondsToUTCTime(p.flightPlan?.departureTime);
-      const eta = secondsToUTCTime(p.flightPlan?.enrouteTime);
+      const phase = p.lastTrack?.state;
+      const etd = secondsToUTCTime(p.flightPlan?.departureTime);  
+      const eta = secondsToUTCTime(Math.floor(new Date(p.lastTrack?.timestamp).getTime() / 1000) + (p.lastTrack?.arrivalDistance && p.lastTrack?.groundSpeed ? Math.floor(p.lastTrack.arrivalDistance / p.lastTrack.groundSpeed * 3600) : 0));
 
       if (arr === currentICAO) arrivals.push({ callsign, from: dep, acft, phase, eta });
       if (dep === currentICAO) departures.push({ callsign, to: arr, acft, phase, etd });
