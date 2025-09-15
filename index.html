@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>IVAO Live Airport Board (UTC)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: #002b7f; /* deep airport blue */
+    color: #ffeb3b;      /* bright yellow text */
+    font-family: 'Segoe UI', Arial, sans-serif;
+  }
+  header {
+    padding: 20px;
+    background: #001f5c;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border-bottom: 3px solid #ffeb3b;
+  }
+  h1 {
+    margin: 0 0 10px;
+    font-size: 2rem;
+    letter-spacing: 2px;
+  }
+  form {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  input, button {
+    padding: 8px 12px;
+    font-size: 1rem;
+    border: none;
+    border-radius: 4px;
+  }
+  input {
+    background: #fff;
+    color: #000;
+    text-transform: uppercase;
+    width: 100px;
+    text-align: center;
+  }
+  button {
+    background: #ffeb3b;
+    color: #000;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  .meta {
+    margin-top: 10px;
+    font-size: 1rem;
+  }
+  main {
+    padding: 0;
+    width: 100%;
+  }
+  .boards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+  }
+  @media (max-width: 900px) {
+    .boards { grid-template-columns: 1fr; }
+  }
+  h2 {
+    background: #001f5c;
+    margin: 0;
+    padding: 10px;
+    font-size: 1.2rem;
+    border-bottom: 2px solid #ffeb3b;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 1.1rem;
+  }
+  th, td {
+    padding: 12px;
+    border-bottom: 1px solid #ffeb3b;
+    text-align: left;
+  }
+  th {
+    background: #001f5c;
+    font-weight: bold;
+  }
+  tbody tr:nth-child(even) {
+    background: rgba(255, 255, 255, 0.05);
+  }
+  tbody tr:hover {
+    background: rgba(255, 255, 0, 0.2);
+  }
+  .muted {
+    color: #ffd600;
+    opacity: 0.8;
+  }
+  .err {
+    color: #ff5252;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>IVAO LIVE ARRIVALS & DEPARTURES (UTC)</h1>
+  <form id="controls">
+    <label for="icao">Airport ICAO:</label>
+    <input id="icao" maxlength="4" placeholder="EHAM" required>
+    <button id="loadBtn" type="submit">Show</button>
+  </form>
+  <div class="meta">
+    <span id="airportTitle">Airport: —</span> |
+    <span id="status">Idle</span> |
+    <span id="lastUpdate"></span>
+  </div>
+</header>
+
+<main>
+  <div class="boards">
+    <section>
+      <h2>Arrivals</h2>
+      <table id="arrivals">
+        <thead>
+          <tr>
+            <th>Callsign</th><th>From</th><th>Aircraft</th><th>Phase</th><th>ETA (UTC)</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Departures</h2>
+      <table id="departures">
+        <thead>
+          <tr>
+            <th>Callsign</th><th>To</th><th>Aircraft</th><th>Phase</th><th>ETD (UTC)</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+  </div>
+</main>
+
+<script>
+const FEED_URL = "https://api.ivao.aero/v2/tracker/whazzup";
+let currentICAO = "";
+let timer = null;
+
+const $ = s => document.querySelector(s);
+const statusEl = $("#status");
+const lastUpdateEl = $("#lastUpdate");
+
+// URL parameter check for ?icao=XXXX
+const params = new URLSearchParams(window.location.search);
+const icaoFromURL = params.get("icao");
+if (icaoFromURL) {
+  $("#icao").value = icaoFromURL.toUpperCase();
+  currentICAO = icaoFromURL.toUpperCase();
+  $("#airportTitle").textContent = "Airport: " + currentICAO;
+  startAutoRefresh(); // auto-load immediately
+}
+
+$("#controls").addEventListener("submit", (e) => {
+  e.preventDefault();
+  currentICAO = $("#icao").value.trim().toUpperCase();
+  $("#airportTitle").textContent = "Airport: " + (currentICAO || "—");
+  if (!currentICAO) return;
+  startAutoRefresh();
+});
+
+function startAutoRefresh() {
+  if (timer) clearInterval(timer);
+  updateBoard();
+  timer = setInterval(updateBoard, 60 * 1000);
+}
+
+// Convert seconds since midnight UTC to HH:MM UTC
+function secondsToUTCTime(sec) {
+  if (!sec || isNaN(sec)) return "-";
+  const date = new Date();
+  date.setUTCHours(0, 0, 0, 0);
+  date.setUTCSeconds(sec);
+  return date.toISOString().substr(11, 5); // HH:MM from ISO string
+}
+
+async function updateBoard() {
+  if (!currentICAO) return;
+  setStatus("Loading...");
+  try {
+    const res = await fetch(FEED_URL, { cache: "no-store" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+
+    const pilots = data?.clients?.pilots || [];
+    const arrivals = [];
+    const departures = [];
+
+    for (const p of pilots) {
+      const callsign = p.callsign || "-";
+      const acft = p.flightPlan?.aircraftId || "-";
+      const dep = (p.flightPlan?.departureId || "").toUpperCase();
+      const arr = (p.flightPlan?.arrivalId || "").toUpperCase();
+      const phase = p.transponder?.flightStatus || (p.lastTrack?.groundSpeed > 40 ? "En Route" : "Ground");
+      const etd = secondsToUTCTime(p.flightPlan?.departureTime);
+      const eta = secondsToUTCTime(p.flightPlan?.enrouteTime);
+
+      if (arr === currentICAO) arrivals.push({ callsign, from: dep, acft, phase, eta });
+      if (dep === currentICAO) departures.push({ callsign, to: arr, acft, phase, etd });
+    }
+
+    arrivals.sort((a,b) => a.callsign.localeCompare(b.callsign));
+    departures.sort((a,b) => a.callsign.localeCompare(b.callsign));
+
+    renderRows("#arrivals tbody", arrivals, ["callsign","from","acft","phase","eta"]);
+    renderRows("#departures tbody", departures, ["callsign","to","acft","phase","etd"]);
+
+    lastUpdateEl.textContent = "Last updated (UTC): " + new Date().toUTCString().split(" ")[4];
+    setStatus(`OK • ${arrivals.length} arrivals • ${departures.length} departures`);
+  } catch (err) {
+    console.error(err);
+    setStatus("Error: " + (err.message || String(err)), true);
+  }
+}
+
+function renderRows(sel, rows, fields) {
+  const tbody = document.querySelector(sel);
+  tbody.innerHTML = "";
+  if (!rows.length) {
+    const tr = document.createElement("tr");
+    const td = document.createElement("td");
+    td.colSpan = fields.length;
+    td.className = "muted";
+    td.textContent = "No matching flights";
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+    return;
+  }
+  for (const r of rows) {
+    const tr = document.createElement("tr");
+    for (const f of fields) {
+      const td = document.createElement("td");
+      td.textContent = r[f] || "-";
+      tr.appendChild(td);
+    }
+    tbody.appendChild(tr);
+  }
+}
+
+function setStatus(msg, isErr = false) {
+  statusEl.textContent = msg;
+  statusEl.className = isErr ? "err" : "muted";
+}
+</script>
+
+</
