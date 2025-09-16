@@ -220,7 +220,7 @@ async function updateBoard() {
       const arr = (p.flightPlan?.arrivalId || "").toUpperCase();
       const phase = p.lastTrack?.state;
       const etd = secondsToUTCTime(p.flightPlan?.departureTime);  
-      const eta = secondsToUTCTime(Math.floor(new Date(p.lastTrack?.timestamp).getTime() / 1000) + (p.lastTrack?.arrivalDistance && p.lastTrack?.groundSpeed ? Math.floor(p.lastTrack.arrivalDistance / p.lastTrack.groundSpeed * 3600) : 0));
+      const eta = (p.lastTrack?.groundSpeed === 0) ? "-" : secondsToUTCTime(Math.floor(new Date(p.lastTrack?.timestamp).getTime() / 1000) + (p.lastTrack?.arrivalDistance && p.lastTrack?.groundSpeed ? Math.floor(p.lastTrack.arrivalDistance / p.lastTrack.groundSpeed * 3600) : 0));
 
       if (arr === currentICAO) arrivals.push({ callsign, from: dep, acft, phase, eta });
       if (dep === currentICAO) departures.push({ callsign, to: arr, acft, phase, etd });
