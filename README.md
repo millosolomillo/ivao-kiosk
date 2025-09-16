@@ -3,6 +3,8 @@
 A full‑screen, **blue‑and‑yellow airport‑style arrivals & departures board** powered by the [IVAO Whazzup v2 JSON feed](https://wiki.ivao.aero/en/home/devops/api/whazuup/file-format-v2).  
 It displays **live** pilot and ATC data for a selected airport ICAO code, updating automatically every minute:
 
+Links to the tool:
+https://ivao-kiosk.vercel.app/
 https://millosolomillo.github.io/ivao-kiosk/
 
 ---
