@@ -4,8 +4,8 @@ A full‑screen, **blue‑and‑yellow airport‑style arrivals & departures boa
 It displays **live** pilot and ATC data for a selected airport ICAO code, updating automatically every minute:
 
 Links to the tool:
-https://ivao-kiosk.vercel.app/
-https://millosolomillo.github.io/ivao-kiosk/
+- https://ivao-kiosk.vercel.app/
+- https://millosolomillo.github.io/ivao-kiosk/
 
 ---
 
